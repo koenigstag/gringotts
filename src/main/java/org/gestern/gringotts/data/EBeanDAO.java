@@ -125,9 +125,18 @@ public class EBeanDAO implements DAO {
 
         CalculateStartBalanceEvent startBalanceEvent = new CalculateStartBalanceEvent(account.owner);
 
-        Bukkit.getPluginManager().callEvent(startBalanceEvent);
+        // fix IllegalStateException CalculateStartBalanceEvent cannot be triggered asynchronously from another thread
+        if (startBalanceEvent.isAsynchronous()) {
+            Bukkit.getScheduler().runTask(Gringotts.instance, () -> {
+                Bukkit.getPluginManager().callEvent(startBalanceEvent);
 
-        if (startBalanceEvent.startValue > 0) account.add(startBalanceEvent.startValue);
+                if (startBalanceEvent.startValue > 0) account.add(startBalanceEvent.startValue);
+            });
+        } else {
+            Bukkit.getPluginManager().callEvent(startBalanceEvent);
+
+            if (startBalanceEvent.startValue > 0) account.add(startBalanceEvent.startValue);
+        }
 
         db.save(acc);
 
